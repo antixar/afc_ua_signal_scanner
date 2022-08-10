@@ -1,0 +1,1 @@
+../../../protobuf-4.21.4/bin/protoc.exe --python_out=. ./*.proto
