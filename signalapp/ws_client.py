@@ -9,20 +9,16 @@ import ssl
 import string
 import time
 import websockets
-from async_timeout import timeout, timeout_at
-from async_timeout import timeout, timeout_at
+from async_timeout import timeout
 from google.protobuf.message import DecodeError
 from random import randint
+from .client import Client, T
 from typing import TypeVar, Type, Iterator, Optional, Tuple
 from websockets.exceptions import InvalidHandshake
 from websockets.legacy.client import WebSocketClientProtocol
-
 from .protos import WebSocketResources_pb2 as ws_resources
 from .settings import TEXT_SECURE_WEBSOCKET_API
 
-T = TypeVar('T', bound='WsClient')
-LOGGER = logging.getLogger(__name__)
-PING_TIMEOUT = 5.0
 
 
 def generateRegistrationID():
@@ -38,32 +34,31 @@ def generatePassword():
 
 
 
-class WsClient:
-    def __init__(self):
+class WsClient(Client):
+    def __init__(self, url: str= TEXT_SECURE_WEBSOCKET_API):
+        super().__init__(url=url)
         self._count = 0
         self._in_queue = asyncio.Queue()
         self._stack = {}
         self._lock = asyncio.Lock()
         self._ws = None
+        return None
 
     @classmethod
-    async def instance(cls: T, ws_link: str = TEXT_SECURE_WEBSOCKET_API) -> Tuple[Optional[T], Optional[str]]:
-        inst = cls()
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-        pem_file = pathlib.Path(__file__).with_name("cert.pem")
-        ssl_context.load_verify_locations(pem_file)
+    async def instance(cls: T, *args, **kwargs) -> Tuple[Optional[T], Optional[str]]:
+        inst = cls(*args, **kwargs)
+        
         try:
-            inst._ws = await websockets.connect(ws_link, ssl=ssl_context)
+            inst._ws = await websockets.connect(inst._url, ssl=inst._ssl_context)
         except (socket.gaierror, InvalidHandshake) as exc:
-            return None, f"WS: {ws_link}, {exc}"
-        # asyncio.ensure_future(inst._ping_pong())
-        asyncio.ensure_future(inst._listen())
+            return None, f"WS: {self._url}, {exc}"
 
+        asyncio.ensure_future(inst._listen())
         return inst, None
 
     
     async def _listen(self):
-        LOGGER.warning("start to listen...")
+        self.logger.warning("start to listen...")
         async for msg in self._ws:
              resp = ws_resources.WebSocketMessage()
              try:
@@ -76,7 +71,7 @@ class WsClient:
              else:
                  raise Exception(resp)
 
-             LOGGER.warning("ggg %s" % resp)
+             self.logger.warning("ggg %s" % resp)
 
              async with self._lock:
                  q = self._stack.pop(resp.id, None)
@@ -98,14 +93,15 @@ class WsClient:
             self._count += 1
             req.request.id = self._count
             self._stack[self._count] = q
-
-
+        
         req.request.verb = method
         req.request.path = path
+        total_headers = self._headers.copy()
+        
         if headers:
-            req.request.headers = headers
-        print(req)
-        print(base64.b64encode(req.SerializeToString()))
+            total_headers.update(headers)
+        req.request.headers.extend([f"{k}:{v}" for k, v in total_headers.items()])
+        self.logger.warning(req)
         await self._ws.send(req.SerializeToString())
 
         try:
