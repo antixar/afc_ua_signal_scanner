@@ -4,3 +4,6 @@ websockets>=10.3
 async_timeout>=4.0.2
 aiohttp>=3.8.1
 aiodns>=3.0.0
+ujson>=5.4.0
+ConfigParser>=5.2.0
+loguru>=0.6.0
