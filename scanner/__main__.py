@@ -14,11 +14,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 async def main():
-    print(id(Store()))
-    print(id(Store()))
-    Store().KEY_TEST_VALUE_DDDD = 1111
-    Store().KEY_TESTRRRRR_VALUE_DDDD = 1111
-    del Store().KEY_TEST_VALUE_DDDD
+
     raise Exception
     http_client, err = await HttpClient.instance()
     res, err = await http_client.get("/v1/accounts/me")

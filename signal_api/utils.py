@@ -52,28 +52,6 @@ class Logger:
         return self.__Logger(self.__class__.__name__, self.unique_log_id() or "")
 
 
-def generate_registration_id(extended_range: Optional[bool] = False) -> int:
-    # Generate a registration ID.  Clients should only do this once, at install time.
-
-    # :param str extended_range: By default (false), the generated registration
-    #                            ID is sized to require the minimal possible protobuf
-    #                            encoding overhead. Specify true if the caller needs
-    #                            the full range of MAX_INT at the cost of slightly
-    #                            higher encoding overhead.
-    # :return: the generated registration ID.
-
-    sr = random.SystemRandom()
-    if extended_range:
-        return sr.randint(0, sys.maxint - 1) + 1
-    return sr.randint(0, 16380) + 1
 
 
-def generate_signaling_key() -> str:
-    # generate random a 32 byte AES key and a 20 byte Hmac256 key and concatenate them.
-    aes_key_32 = secrets.token_urlsafe(32)
-    hmac_key_20 = secrets.token_urlsafe(20)
-    return aes_key_32 + hmac_key_20
 
-
-def generate_password():
-    return secrets.token_urlsafe(16)

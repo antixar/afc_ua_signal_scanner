@@ -5,15 +5,13 @@ import string
 import ujson
 from typing import Optional, Tuple
 from urllib.parse import urljoin
-
+import hashlib
 from .client import Client, T
 from .settings import TEXT_SECURE_SERVER_URL
 from .store import Store
-from .utils import generate_password
+from datetime import date
 
 
-def generateRegistrationID():
-    return randint(1, 2 ^ 32) & 0x3FFF
 
 
 class HttpClient(Client):
@@ -30,24 +28,36 @@ class HttpClient(Client):
         self.passwd = generate_password()
         return None
 
+    def __encode_password(self, login: str) -> str:
+        m = hashlib.sha256()
+        m.update(login.encode())
+        m.update(str(date.today()).encode())
+        return m.hexdigest()[:35]
+
+
     async def __send(
             self, method: str, path: str, headers: dict, body: dict = None
     ) -> Tuple[Optional[dict], Optional[str]]:
         full_url = urljoin(self._url, path)
         if not headers:
             headers = {}
-        headers['Content-Type'] = 'application/json'
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
 
         params = {
             "url": full_url,
             "headers": headers,
             "ssl_context": self._ssl_context,
             "method": method,
-            # "auth": aiohttp.BasicAuth(self.store.KEY_ACCOUNT_PHONE_NUMBER, self.passwd)
+            "auth": aiohttp.BasicAuth(self.store.KEY_ACCOUNT_PHONE_NUMBER, self.__encode_password(self.store.KEY_ACCOUNT_PHONE_NUMBER))
         }
+        self.logger.info("params: {}", params)
         # raise Exception(aiohttp.BasicAuth(self.store.KEY_ACCOUNT_PHONE_NUMBER, self.passwd))
         if method in ["PUT", "POST"] and body:
             params["json"] = body
+            self.logger.info("body: {}", body)
         # raise Exception(params)
         resp = await self._session.request(**params)
         self.logger.warning(resp.headers)
@@ -56,7 +66,7 @@ class HttpClient(Client):
         if not resp.headers["Content-Length"]:
             return None, None
         body = await resp.text()
-        if resp.headers["Content-Type"] == "application/json":
+        if resp.headers.get("Content-Type") == "application/json":
             body = ujson.loads(body)
         return body, None
 

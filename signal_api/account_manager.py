@@ -1,6 +1,6 @@
 from typing import Optional
 
-from . import utils
+from .key_helper import KeyHelper
 from .http_client import HttpClient
 from .paths import CREATE_ACCOUNT_SMS_PATH, VERIFY_ACCOUNT_CODE_PATH
 from .store import Store
@@ -38,20 +38,19 @@ class AccountManager(Logger, metaclass=Singleton):
     async def __verify_with_code(self, code: str, pin: int) -> Optional[str]:
         code = code.replace("-", "")
         path = VERIFY_ACCOUNT_CODE_PATH % code
-        registration_id = utils.generate_registration_id()
-        signaling_key = utils.generate_signaling_key()
+        registration_id = KeyHelper.generate_registration_id()
+        signaling_key = KeyHelper.generate_signaling_key()
+        self.store.set_identity_key_pair()
+        
+        pair = self.store.get_identity_key_pair()
+        raise Exception(pair)
         self.logger.info("ddddd {} === {}", registration_id, signaling_key)
         # false, 1234, null, null, true, null
         body = {
 
-            # "signalingKey": signaling_key,
             "registrationId": registration_id,
-            # "voice": True,
-            # "video": True,
-            # "fetchesMessages": False,
-            # "pin": "1234",
-            # "registrationLock": "vvvvv",
-            # "unidentifiedAccessKey": b"ffff",
+            "voice": True,
+            "video": True,
             "unrestrictedUnidentifiedAccess": False,
             # this.capabilities = capabilities;
             # this.discoverableByPhoneNumber = discoverableByPhoneNumber;
@@ -63,7 +62,14 @@ class AccountManager(Logger, metaclass=Singleton):
             return err
 
         data, err = await client.put(path, body)
+        if err:
+            return err
+        self.store.KEY_ACCOUNT_REGISTRATION_ID = registration_id
+        self.store.KEY_ACCOUNT_UUID = date["uuid"]
+        self.store.KEY_ACCOUNT_PNI = date["pni"]
+        
         self.logger.warning("DDDDD {} === {}", data, err)
         if err:
             self.logger.error(err)
+            
         return err

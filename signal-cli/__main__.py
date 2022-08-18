@@ -33,6 +33,7 @@ def check_pin_format(arg_value, re_pin=re.compile(r"^[0-9]{4}$")):
 
 
 async def main():
+
     parser = argparse.ArgumentParser(
         description="Options for setup of Signal settings and running of its modes"
     )
