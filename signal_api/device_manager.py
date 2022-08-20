@@ -1,5 +1,5 @@
 from typing import Optional
-
+from .account_manager import AccountManager
 from .key_helper import KeyHelper
 from .http_client import HttpClient
 from .paths import CREATE_ACCOUNT_SMS_PATH, VERIFY_ACCOUNT_CODE_PATH
@@ -7,13 +7,8 @@ from .store import Store
 from .utils import Singleton, Logger
 
 
-class AccountManager(Logger, metaclass=Singleton):
-    client = HttpClient
-    store = Store()
-
-    def unique_log_id(self) -> str:
-        return self.store.KEY_ACCOUNT_PHONE_NUMBER
-
+class DeviceManager(AccountManager, metaclass=Singleton):
+    
     async def register_with_verification_code(
             self, captcha_token: str = None,
             code: str = None,

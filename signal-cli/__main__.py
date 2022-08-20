@@ -7,6 +7,7 @@ import signal
 import sys
 
 from signal_api.account_manager import AccountManager
+from signal_api.device_manager import DeviceManager
 from signal_api.http_client import HttpClient
 from signal_api.paths import CREATE_ACCOUNT_SMS_PATH, KEEPALIVE_PATH, WHO_AM_I
 from signal_api.store import Store
@@ -59,6 +60,12 @@ async def main():
         help='Code of verification',
     )
     parser.add_argument(
+        "--device",
+        # nargs='?',
+        action='store_true',
+        help='Registration of a new device',
+    )
+    parser.add_argument(
         "--pin",
         nargs='?',
         type=check_pin_format,
@@ -84,10 +91,15 @@ async def main():
     else:
         Store().KEY_ACCOUNT_PHONE_NUMBER = args.account[0]
     command = args.command[0]
+  
     if command == "register":
-        err = await AccountManager().register_with_verification_code(code=args.code or None,
-                                                                     pin=args.pin or None,
-                                                                     captcha_token=args.captcha or None)
+        params = {
+            "code":args.code or None,
+            "pin": args.pin or None,
+            "captcha_token":args.captcha or None
+        }
+        manager = DeviceManager() if args.device else AccountManager()
+        err = await manager.register_with_verification_code(**params)
         if err:
             SystemExit("Can't register your account, try with captcha token again")
 

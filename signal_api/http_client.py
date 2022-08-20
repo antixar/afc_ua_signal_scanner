@@ -25,7 +25,6 @@ class HttpClient(Client):
         self._session = aiohttp.ClientSession(
             headers=self._headers, json_serialize=ujson.dumps, raise_for_status=False
         )
-        self.passwd = generate_password()
         return None
 
     def __encode_password(self, login: str) -> str:
