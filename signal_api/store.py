@@ -1,19 +1,42 @@
 import configparser
 import re
 from pathlib import Path
-from .utils import Singleton
+from .utils import Singleton, Logger
 import base64
 import ujson as json
-from .key_helper import KeyPair, KeyHelper
-RE_KEY = re.compile("^KEY_([A-Z]+)_([A-Z_]+)$")
+from .key_helper import KeyPair, KeyHelper, SignedPreKeyRecord, PreKeyRecord
+import pickle
+from typing import Optional
+
+RE_KEY = re.compile("^KEY_([A-Z]+)_([A-Z0-9_]+)$")
 
 
-class Store(metaclass=Singleton):
+class Store(Logger, metaclass=Singleton):
+
     def __init__(self):
-        self.__store_file = Path.home() / ".singalapp_py"
         self.__config = configparser.ConfigParser()
-        if self.__store_file.exists():
-            self.__config.read(str(self.__store_file))
+        if self.config_path.exists():
+            self.__config.read(str(self.config_path))
+        
+        self.__sessions = configparser.ConfigParser()
+        if self.session_path.exists():
+            self.__sessions.read(str(self.session_path))
+
+    @property
+    def store_folder(self):
+        folder = Path.home() / ".py_signalapp"
+        if not folder.exists():
+            folder.mkdir()
+        return folder
+        
+    @property
+    def config_path(self) -> Path:
+        return self.store_folder / "config.ini"
+
+    @property
+    def session_path(self) -> Path:
+        return self.store_folder / "sessions.ini"
+
 
     def __getattr__(self, key):
         if not key.startswith("KEY_"):
@@ -34,6 +57,9 @@ class Store(metaclass=Singleton):
 
         if not key.startswith("KEY_"):
             return super().__setattr__(key, value)
+        return self.__save(key, value)
+
+    def __save(self, key, value):
         if str(getattr(self, key)) == str(value):
             return
         option1, option2 = self.__key2option(key)
@@ -42,6 +68,7 @@ class Store(metaclass=Singleton):
         self.__config[option1][option2] = str(value)
         with open(str(self.__store_file), "w") as f:
             self.__config.write(f)
+
 
     def __delattr__(self, key):
         if not key.startswith("KEY_"):
@@ -74,16 +101,45 @@ class Store(metaclass=Singleton):
         return m.group(1).lower().title(), m.group(2).lower()
 
     
-    def get_identity_key_pair(self) -> KeyPair:
-        data = self.KEY_KEYS_IDENTITY_PAIR
+ 
+    def __key2str(self, key):
+        return base64.b64encode(pickle.dumps(key)).decode('utf-8')
+    
+    
+    def __str2key(self, data) -> object:
         if not data:
             return None
-        return KeyPair.fromSerialized(json.loads(base64.b64decode(data).decode('utf-8')))
+        return pickle.loads(base64.b64decode(data))
+
+    
+    def generate_keys(self):
+    
+        identity_key_pair = KeyHelper.generate_key_pair()
+        self.KEY_KEYS_IDENTITY_PAIR = self.__key2str(identity_key_pair)
         
-    def set_identity_key_pair(self, pair: KeyPair=None):
-        if not pair:
-            pair = KeyHelper.generate_identity_key_pair()
-        self.KEY_KEYS_IDENTITY_PAIR = base64.b64encode(json.dumps(pair.serialize()).encode()).decode('utf-8')
+        signed_pre_key = KeyHelper.generate_signed_pre_key(identity_key_pair, 0)
+        self.KEY_KEYS_SIGNED_PRE_KEY = self.__key2str(signed_pre_key)
+        
+        for k in KeyHelper.generate_pre_keys(0, 100):
+            self.__save(f"KEY_PREKEYS_{k.id}", self.__key2str(k))
         return
+
+    @property
+    def identity_key_pair(self) -> Optional[KeyPair]:
+        return self.__str2key(self.KEY_KEYS_IDENTITY_PAIR)
+
+    @property
+    def signed_pre_key(self) -> Optional[SignedPreKeyRecord]:
+        return self.__str2key(self.KEY_KEYS_SIGNED_PRE_KEY)
     
+    def get_pre_key(self, key_id) -> Optional[PreKeyRecord]:
+        return self.__str2key(getattr(self, f"KEY_PREKEYS_{key_id}"))
+ 
     
+    def remove(self):
+        if self.config_path.exists():
+            self.config_path.unlink()
+            self.__config = configparser.ConfigParser()
+        if self.session_path.exists():
+            self.session_path.unlink()
+            self.__sessions = configparser.ConfigParser()

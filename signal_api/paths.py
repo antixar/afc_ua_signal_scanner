@@ -16,6 +16,7 @@ SIGNED_PREKEY_PATH = "/v2/keys/signed"
 PROVISIONING_CODE_PATH = "/v1/devices/provisioning/code"
 PROVISIONING_MESSAGE_PATH = "/v1/provisioning/%s"
 DEVICE_PATH = "/v1/devices/%s"
+DEVICES_PATH = "/v1/devices"
 
 DIRECTORY_TOKENS_PATH = "/v1/directory/tokens"
 DIRECTORY_VERIFY_PATH = "/v1/directory/%s"

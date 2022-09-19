@@ -4,12 +4,28 @@ import secrets
 import sys
 from dataclasses import dataclass
 from loguru import logger
-from typing import Any, Optional
+from typing import Any, Optional, List
 from x3dh.implementations import KeyPairCurve25519
+import time
 
 
 class KeyPair(KeyPairCurve25519):
     pass
+    
+
+class PreKeyRecord:
+    def __init__(self, key_id: int, key_pair: KeyPair):
+        self.id = key_id
+        self.pair = key_pair
+        # raise Exception(self.pair.serialize())
+        
+class SignedPreKeyRecord(PreKeyRecord):
+    def __init__(self, key_id, key_pair, timestamp, signature):
+        super().__init__(key_id, key_pair)
+        self.timestamp = timestamp
+        self.signature = signature
+    
+        
 
 class KeyHelper:
 
@@ -38,12 +54,53 @@ class KeyHelper:
 
 
     @staticmethod
-    def generate_identity_key_pair() -> KeyPair:
-        # Generate an identity key pair.  Clients should only do this once, at install time.
+    def generate_key_pair() -> KeyPair:
+        # Generate a key pair.
    
         # :return: the generated IdentityKeyPair.
         return KeyPairCurve25519.generate()
-        # raise Exception(pair)
-        # publicKey = IdentityKey(keyPair.getPublicKey());
-        # return dentityKeyPair(publicKey, keyPair.getPrivateKey());
+
+    @staticmethod
+    def generate_pre_keys(start: int, count: int) -> List[PreKeyRecord]:
+        for i in range(start, start + count):
+            yield PreKeyRecord(i, KeyHelper.generate_key_pair()) 
+
+
+    @staticmethod
+    def generate_signed_pre_key(identity_key_pair: KeyPair, key_id: int) -> SignedPreKeyRecord:
+        key_pair = KeyHelper.generate_key_pair()
+        
+        signature = KeyHelper.calculate_signature(
+                identity_key_pair,
+                key_pair.pub
+        )
+        return SignedPreKeyRecord(key_id, key_pair, time.time(), signature)
+     
+        
+    @staticmethod
+    def calculate_signature(key_pair: KeyPair, message: bytes) -> bytes:
+        return key_pair.encrypt(message, key_pair)
+
   
+  # IdentityKeyPair    identityKey        = KeyHelper.generateIdentityKeyPair();
+# List<PreKeyRecord> oneTimePreKeys     = KeyHelper.generatePreKeys(0, 100);
+# PreKeyRecord       lastResortKey      = KeyHelper.generateLastResortPreKey();
+# SignedPreKeyRecord signedPreKeyRecord = KeyHelper.generateSignedPreKey(identityKey, signedPreKeyId);
+
+
+
+# static Uint8List calculateSignature(
+#      ECPrivateKey? signingKey, Uint8List? message) {
+#    if (signingKey == null || message == null) {
+#      throw Exception('Values must not be null');
+#    }#
+#
+#    if (signingKey.getType() == djbType) {
+#      final privateKey = signingKey.serialize();
+#      final random = generateRandomBytes();
+
+#      return sign(privateKey, message, random);
+#    } else {
+#      throw Exception('Unknown Signing Key type${signingKey.getType()}');
+#    }
+#   }

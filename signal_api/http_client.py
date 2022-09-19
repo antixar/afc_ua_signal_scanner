@@ -12,6 +12,7 @@ from .store import Store
 from datetime import date
 
 
+DEFAULT_DEVICE_ID = 1
 
 
 class HttpClient(Client):
@@ -33,6 +34,15 @@ class HttpClient(Client):
         m.update(str(date.today()).encode())
         return m.hexdigest()[:35]
 
+    def __createAuthHeader(self) -> str:
+        login = str(self.store.KEY_ACCOUNT_UUID or self.store.KEY_ACCOUNT_PHONE_NUMBER)
+        login = self.store.KEY_ACCOUNT_PHONE_NUMBER
+        # if self.store.KEY_DEVICE_ID and self.store.KEY_DEVICE_ID != DEFAULT_DEVICE_ID:
+        #     login += "." + self.store.KEY_DEVICE_ID
+        # login += ".2"
+        # raise Exception(aiohttp.BasicAuth(login, self.__encode_password(login)).encode())
+        return aiohttp.BasicAuth(login, self.__encode_password(login))
+      
 
     async def __send(
             self, method: str, path: str, headers: dict, body: dict = None
@@ -50,8 +60,7 @@ class HttpClient(Client):
             "headers": headers,
             "ssl_context": self._ssl_context,
             "method": method,
-            "auth": aiohttp.BasicAuth(self.store.KEY_ACCOUNT_PHONE_NUMBER, self.__encode_password(self.store.KEY_ACCOUNT_PHONE_NUMBER))
-        }
+            "auth":   self.__createAuthHeader()}
         self.logger.info("params: {}", params)
         # raise Exception(aiohttp.BasicAuth(self.store.KEY_ACCOUNT_PHONE_NUMBER, self.passwd))
         if method in ["PUT", "POST"] and body:
@@ -67,6 +76,7 @@ class HttpClient(Client):
         body = await resp.text()
         if resp.headers.get("Content-Type") == "application/json":
             body = ujson.loads(body)
+            print(str(body))
         return body, None
 
     async def get(

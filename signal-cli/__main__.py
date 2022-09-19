@@ -8,6 +8,7 @@ import sys
 
 from signal_api.account_manager import AccountManager
 from signal_api.device_manager import DeviceManager
+from signal_api.session import Session
 from signal_api.http_client import HttpClient
 from signal_api.paths import CREATE_ACCOUNT_SMS_PATH, KEEPALIVE_PATH, WHO_AM_I
 from signal_api.store import Store
@@ -45,7 +46,7 @@ async def main():
         "--account",
         nargs=1,
         type=check_phone_format,
-        help='An account value (phone number with land code)"',
+        help='An account value (phone number with land code)',
     )
     parser.add_argument(
         "--captcha",
@@ -71,13 +72,30 @@ async def main():
         type=check_pin_format,
         help='Pin of verification',
     )
+    parser.add_argument(
+        "-r",
+        "--receiver",
+        nargs=1,
+        type=check_phone_format,
+        help='A receiver value (phone number with land code)',
+    )
+    parser.add_argument(
+        "-m",
+        "--message",
+        nargs=1,
+        type=str,
+        help='A message value',
+    )
+    
+    
     # Required positional argument
     parser.add_argument(
         "command",
         nargs=1,
         help="A command for this this tool. Available values:",
-        choices=["register"],
+        choices=["register", "send"],
     )
+    
 
     args = parser.parse_args()
 
@@ -89,6 +107,8 @@ async def main():
                 "Not found an account phone number. Please input it with the '-a' option"
             )
     else:
+        if Store().KEY_ACCOUNT_PHONE_NUMBER and Store().KEY_ACCOUNT_PHONE_NUMBER != args.account[0]:
+            Store().remove()
         Store().KEY_ACCOUNT_PHONE_NUMBER = args.account[0]
     command = args.command[0]
   
@@ -101,29 +121,20 @@ async def main():
         manager = DeviceManager() if args.device else AccountManager()
         err = await manager.register_with_verification_code(**params)
         if err:
-            SystemExit("Can't register your account, try with captcha token again")
-
-    raise Exception(Store().KEY_ACCOUNT_PHONE_NUMBER)
-    print(parser.print_help())
-    print(id(Store()))
-    Store().KEY_TEST_VALUE_DDDD = 1111
-    Store().KEY_TESTRRRRR_VALUE_DDDD = 1111
-    del Store().KEY_TEST_VALUE_DDDD
-    raise Exception
-    http_client, err = await HttpClient.instance()
-    res, err = await http_client.get("/v1/accounts/me")
-    if err:
-        LOGGER.warning(err)
-    try:
-        ws_client, err = await WsClient.instance()
-        if err:
-            raise SystemExit(err)
-        # await ws_client.get(CREATE_ACCOUNT_SMS_PATH % ("111", "android"))
-        # await ws_client.get("/v1/accounts/me")
-        await ws_client.stop()
-    except asyncio.CancelledError:
-        LOGGER.warning("You pressed Ctrl+C!")
-        sys.exit(0)
+            raise SystemExit("Can't register your account, try with captcha token again")
+    if command == "send":
+        if not args.message:
+            raise SystemExit("not set any message value")
+        if not args.receiver:
+            raise SystemExit("not set a receiver value")
+        session = Session(args.receiver[0])
+        for message in args.message:
+            err = await session.send(message)
+            if err:
+                raise SystemExit("Can't send this message")
+    LOGGER.info("finished...")
+    return 
+    
 
 
 loop = asyncio.get_event_loop()

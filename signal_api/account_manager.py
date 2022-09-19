@@ -1,18 +1,20 @@
 from typing import Optional
 
 from .key_helper import KeyHelper
-from .http_client import HttpClient
+
 from .paths import CREATE_ACCOUNT_SMS_PATH, VERIFY_ACCOUNT_CODE_PATH
-from .store import Store
-from .utils import Singleton, Logger
+from .utils import Singleton
+from .base import Base
 
 
-class AccountManager(Logger, metaclass=Singleton):
-    client = HttpClient
-    store = Store()
+class AccountManager(Base, metaclass=Singleton):
 
     def unique_log_id(self) -> str:
         return self.store.KEY_ACCOUNT_PHONE_NUMBER
+        
+    @property
+    def path(self):
+        return CREATE_ACCOUNT_SMS_PATH % (self.store.KEY_ACCOUNT_PHONE_NUMBER, "android")
 
     async def register_with_verification_code(
             self, captcha_token: str = None,
@@ -24,14 +26,16 @@ class AccountManager(Logger, metaclass=Singleton):
         client, err = await self.client.instance()
         if err:
             return err
-        path = CREATE_ACCOUNT_SMS_PATH % (self.store.KEY_ACCOUNT_PHONE_NUMBER, "android")
+        addl_path = ''
         if captcha_token:
             captcha_token = captcha_token.replace("signalcaptcha://", "");
-            path += f"&captcha={captcha_token}"
-        _, err = await client.get(path)
-
+            addl_path += f"&captcha={captcha_token}"
+        resp, err = await client.get(self.path + addl_path)
+        
         if err:
             self.logger.error(err)
+        else:
+            self.logger.warning(resp)
         return err
 
     async def __verify_with_code(self, code: str, pin: int) -> Optional[str]:
@@ -42,7 +46,7 @@ class AccountManager(Logger, metaclass=Singleton):
         self.store.set_identity_key_pair()
         
         pair = self.store.get_identity_key_pair()
-        raise Exception(pair)
+        # raise Exception(pair)
         self.logger.info("ddddd {} === {}", registration_id, signaling_key)
         # false, 1234, null, null, true, null
         body = {
@@ -64,8 +68,8 @@ class AccountManager(Logger, metaclass=Singleton):
         if err:
             return err
         self.store.KEY_ACCOUNT_REGISTRATION_ID = registration_id
-        self.store.KEY_ACCOUNT_UUID = date["uuid"]
-        self.store.KEY_ACCOUNT_PNI = date["pni"]
+        self.store.KEY_ACCOUNT_UUID = data["uuid"]
+        self.store.KEY_ACCOUNT_PNI = data["pni"]
         
         self.logger.warning("DDDDD {} === {}", data, err)
         if err:
