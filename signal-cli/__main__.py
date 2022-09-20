@@ -8,9 +8,9 @@ import sys
 
 from signal_api.account_manager import AccountManager
 from signal_api.device_manager import DeviceManager
-from signal_api.session import Session
 from signal_api.http_client import HttpClient
 from signal_api.paths import CREATE_ACCOUNT_SMS_PATH, KEEPALIVE_PATH, WHO_AM_I
+from signal_api.session import Session
 from signal_api.store import Store
 from signal_api.ws_client import WsClient
 
@@ -35,7 +35,6 @@ def check_pin_format(arg_value, re_pin=re.compile(r"^[0-9]{4}$")):
 
 
 async def main():
-
     parser = argparse.ArgumentParser(
         description="Options for setup of Signal settings and running of its modes"
     )
@@ -86,8 +85,7 @@ async def main():
         type=str,
         help='A message value',
     )
-    
-    
+
     # Required positional argument
     parser.add_argument(
         "command",
@@ -95,7 +93,6 @@ async def main():
         help="A command for this this tool. Available values:",
         choices=["register", "send"],
     )
-    
 
     args = parser.parse_args()
 
@@ -111,12 +108,12 @@ async def main():
             Store().remove()
         Store().KEY_ACCOUNT_PHONE_NUMBER = args.account[0]
     command = args.command[0]
-  
+
     if command == "register":
         params = {
-            "code":args.code or None,
+            "code": args.code or None,
             "pin": args.pin or None,
-            "captcha_token":args.captcha or None
+            "captcha_token": args.captcha or None
         }
         manager = DeviceManager() if args.device else AccountManager()
         err = await manager.register_with_verification_code(**params)
@@ -133,8 +130,7 @@ async def main():
             if err:
                 raise SystemExit("Can't send this message")
     LOGGER.info("finished...")
-    return 
-    
+    return
 
 
 loop = asyncio.get_event_loop()
