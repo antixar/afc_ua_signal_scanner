@@ -18,8 +18,8 @@ class DeviceManager(AccountManager, metaclass=Singleton):
             code: str = None,
             pin: int = None
         ) -> Optional[str]:
-        if not self.store.KEY_KEYS_IDENTITY_PAIR:
-            self.store.generate_keys()
+        if not self.store.config.KEY_KEYS_IDENTITY_PAIR:
+            self.store.config.generate_keys()
           
     
 
@@ -28,9 +28,9 @@ class DeviceManager(AccountManager, metaclass=Singleton):
         path = VERIFY_ACCOUNT_CODE_PATH % code
         registration_id = KeyHelper.generate_registration_id()
         # signaling_key = KeyHelper.generate_signaling_key()
-        self.store.set_identity_key_pair()
+        self.store.config.set_identity_key_pair()
         
-        pair = self.store.get_identity_key_pair()
+        pair = self.store.config.get_identity_key_pair()
         raise Exception(pair)
         self.logger.info("ddddd {} === {}", registration_id, signaling_key)
         # false, 1234, null, null, true, null
@@ -53,9 +53,9 @@ class DeviceManager(AccountManager, metaclass=Singleton):
         if err:
             return err
         self.logger.info("REG data: {}", data)
-        self.store.KEY_ACCOUNT_REGISTRATION_ID = registration_id
-        self.store.KEY_ACCOUNT_UUID = date["uuid"]
-        self.store.KEY_ACCOUNT_PNI = date["pni"]
+        self.store.config.KEY_ACCOUNT_REGISTRATION_ID = registration_id
+        self.store.config.KEY_ACCOUNT_UUID = date["uuid"]
+        self.store.config.KEY_ACCOUNT_PNI = date["pni"]
         
         self.logger.warning("DDDDD {} === {}", data, err)
         if err:

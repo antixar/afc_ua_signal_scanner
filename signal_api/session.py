@@ -23,6 +23,10 @@ class Session(Base):
         self.__receiver = receiver
 
     async def send(self, message: str) -> Optional[str]:
+        contact, err = await self.store.contact.get(self.__receiver, self.client)
+        if err:
+            return err
+            
         client, err = await self.client.instance()
         if err:
             return err

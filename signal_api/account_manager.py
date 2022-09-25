@@ -9,11 +9,11 @@ from .utils import Singleton
 class AccountManager(Base, metaclass=Singleton):
 
     def unique_log_id(self) -> str:
-        return self.store.KEY_ACCOUNT_PHONE_NUMBER
+        return self.store.config.KEY_ACCOUNT_PHONE_NUMBER
 
     @property
     def path(self):
-        return CREATE_ACCOUNT_SMS_PATH % (self.store.KEY_ACCOUNT_PHONE_NUMBER, "android")
+        return CREATE_ACCOUNT_SMS_PATH % (self.store.config.KEY_ACCOUNT_PHONE_NUMBER, "android")
 
     async def register_with_verification_code(
             self, captcha_token: str = None,
@@ -41,8 +41,8 @@ class AccountManager(Base, metaclass=Singleton):
         code = code.replace("-", "")
         path = VERIFY_ACCOUNT_CODE_PATH % code
         registration_id = KeyHelper.generate_registration_id()
-        if not self.store.KEY_KEYS_IDENTITY_PAIR:
-            self.store.generate_keys()
+        if not self.store.config.KEY_KEYS_IDENTITY_PAIR:
+            self.store.config.generate_keys()
 
         body = {
 
@@ -59,12 +59,16 @@ class AccountManager(Base, metaclass=Singleton):
         data, err = await client.put(path, body)
         if err:
             return err
-        self.store.KEY_ACCOUNT_REGISTRATION_ID = registration_id
-        self.store.KEY_ACCOUNT_UUID = data["uuid"]
-        self.store.KEY_ACCOUNT_PNI = data["pni"]
+        self.store.config.KEY_ACCOUNT_REGISTRATION_ID = registration_id
+        self.store.config.KEY_ACCOUNT_UUID = data["uuid"]
+        self.store.config.KEY_ACCOUNT_PNI = data["pni"]
 
         self.logger.warning("DDDDD {} === {}", data, err)
         if err:
             self.logger.error(err)
 
         return err
+
+
+    async def get_account(self, name):
+        raise Exception("DDDDDDDD")

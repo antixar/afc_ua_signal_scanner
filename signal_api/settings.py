@@ -12,4 +12,6 @@ TEXT_SECURE_SERVER_URL = os.environ.get(
     "TEXT_SECURE_SERVER_URL", "https://chat.signal.org/"
 )
 
+CONTACT_DISCOVERY_URL = os.environ.get("SIGNAL_CONTACT_DISCOVERY_URL", "https://api.directory.signal.org")
+
 # openssl s_client -showcerts -servername textsecure-service.whispersystems.org -connect textsecure-service.whispersystems.org:443 </dev/null

@@ -95,18 +95,18 @@ async def main():
     )
 
     args = parser.parse_args()
-
+    config = Store().config
     if not args.account:
         # try to load this value from a local score
-        args.account = Store().KEY_ACCOUNT_PHONE_NUMBER
+        args.account = config.KEY_ACCOUNT_PHONE_NUMBER
         if not args.account:
             raise SystemExit(
                 "Not found an account phone number. Please input it with the '-a' option"
             )
     else:
-        if Store().KEY_ACCOUNT_PHONE_NUMBER and Store().KEY_ACCOUNT_PHONE_NUMBER != args.account[0]:
-            Store().remove()
-        Store().KEY_ACCOUNT_PHONE_NUMBER = args.account[0]
+        if config.KEY_ACCOUNT_PHONE_NUMBER and config.KEY_ACCOUNT_PHONE_NUMBER != args.account[0]:
+            config.clean()
+        config.KEY_ACCOUNT_PHONE_NUMBER = args.account[0]
     command = args.command[0]
 
     if command == "register":
@@ -128,7 +128,7 @@ async def main():
         for message in args.message:
             err = await session.send(message)
             if err:
-                raise SystemExit("Can't send this message")
+                raise SystemExit(f"Can't send this message. {err}")
     LOGGER.info("finished...")
     return
 

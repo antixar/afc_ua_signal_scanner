@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 from urllib.parse import urljoin
 import hashlib
 from .client import Client, T
-from .settings import TEXT_SECURE_SERVER_URL
+from .settings import TEXT_SECURE_SERVER_URL, CONTACT_DISCOVERY_URL
 from .store import Store
 from datetime import date
 
@@ -28,24 +28,20 @@ class HttpClient(Client):
         )
         return None
 
-    def __encode_password(self, login: str) -> str:
-        m = hashlib.sha256()
-        m.update(login.encode())
-        m.update(str(date.today()).encode())
-        return m.hexdigest()[:35]
+
 
     def __createAuthHeader(self) -> str:
-        login = str(self.store.KEY_ACCOUNT_UUID or self.store.KEY_ACCOUNT_PHONE_NUMBER)
-        login = self.store.KEY_ACCOUNT_PHONE_NUMBER
+        login = str(self.store.config.KEY_ACCOUNT_UUID or self.store.config.KEY_ACCOUNT_PHONE_NUMBER)
+        login = self.store.config.KEY_ACCOUNT_PHONE_NUMBER
         # if self.store.KEY_DEVICE_ID and self.store.KEY_DEVICE_ID != DEFAULT_DEVICE_ID:
         #     login += "." + self.store.KEY_DEVICE_ID
         # login += ".2"
         # raise Exception(aiohttp.BasicAuth(login, self.__encode_password(login)).encode())
-        return aiohttp.BasicAuth(login, self.__encode_password(login))
+        return aiohttp.BasicAuth(login, self.store.config.password)
       
 
     async def __send(
-            self, method: str, path: str, headers: dict, body: dict = None
+            self, method: str, path: str, headers: dict = None, body: dict = None
     ) -> Tuple[Optional[dict], Optional[str]]:
         full_url = urljoin(self._url, path)
         if not headers:
@@ -60,9 +56,10 @@ class HttpClient(Client):
             "headers": headers,
             "ssl_context": self._ssl_context,
             "method": method,
-            "auth":   self.__createAuthHeader()}
+            "auth":   self.__createAuthHeader()
+        }
+        
         self.logger.info("params: {}", params)
-        # raise Exception(aiohttp.BasicAuth(self.store.KEY_ACCOUNT_PHONE_NUMBER, self.passwd))
         if method in ["PUT", "POST"] and body:
             params["json"] = body
             self.logger.info("body: {}", body)
@@ -92,3 +89,7 @@ class HttpClient(Client):
     async def stop(self):
         if self._session:
             await self._session.close()
+
+class ContactClient(HttpClient):
+    async def create(self) -> Optional[str]:
+        return await super().create(url=CONTACT_DISCOVERY_URL)
