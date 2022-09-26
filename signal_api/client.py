@@ -34,10 +34,10 @@ class Client(Logger, metaclass=Singleton):
 
     async def create(self, url: str):
         self._url = url
-        self._headers = {
-            "Host": urlparse(url).netloc,
-            "User-Agent": "Signal-Desktop/1.2.3",
-        }
+        # self._headers = {
+        #     "Host": urlparse(url).netloc,
+        #     "User-Agent": "Signal-Desktop/1.2.3",
+        # }
         self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
         pem_file = pathlib.Path(__file__).with_name("cert.pem")
         self._ssl_context.load_verify_locations(pem_file)

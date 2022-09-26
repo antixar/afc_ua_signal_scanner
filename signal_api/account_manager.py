@@ -68,7 +68,3 @@ class AccountManager(Base, metaclass=Singleton):
             self.logger.error(err)
 
         return err
-
-
-    async def get_account(self, name):
-        raise Exception("DDDDDDDD")

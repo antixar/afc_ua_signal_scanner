@@ -1,18 +1,25 @@
 import aiohttp
 import asyncio
+import hashlib
+import platform
 import random
 import string
 import ujson
+from datetime import date
 from typing import Optional, Tuple
 from urllib.parse import urljoin
-import hashlib
+
 from .client import Client, T
 from .settings import TEXT_SECURE_SERVER_URL, CONTACT_DISCOVERY_URL
 from .store import Store
-from datetime import date
-
 
 DEFAULT_DEVICE_ID = 1
+
+PLATFORM_STRINGS = {
+    'win32': 'Windows',
+    'darwin': 'macOS',
+    'linux': 'Linux',
+};
 
 
 class HttpClient(Client):
@@ -24,21 +31,20 @@ class HttpClient(Client):
         if err:
             return err
         self._session = aiohttp.ClientSession(
-            headers=self._headers, json_serialize=ujson.dumps, raise_for_status=False
+            # headers=self._headers,
+            json_serialize=ujson.dumps,
+            raise_for_status=False
         )
         return None
-
-
 
     def __createAuthHeader(self) -> str:
         login = str(self.store.config.KEY_ACCOUNT_UUID or self.store.config.KEY_ACCOUNT_PHONE_NUMBER)
         login = self.store.config.KEY_ACCOUNT_PHONE_NUMBER
-        # if self.store.KEY_DEVICE_ID and self.store.KEY_DEVICE_ID != DEFAULT_DEVICE_ID:
-        #     login += "." + self.store.KEY_DEVICE_ID
-        # login += ".2"
+        # if self.store.config.KEY_ACCOUNT_DEVICE_ID and self.store.config.KEY_ACCOUNT_DEVICE_ID != DEFAULT_DEVICE_ID:
+        #     login += "." + self.store.config.KEY_ACCOUNT_DEVICE_ID
+        # login += ".1"
         # raise Exception(aiohttp.BasicAuth(login, self.__encode_password(login)).encode())
         return aiohttp.BasicAuth(login, self.store.config.password)
-      
 
     async def __send(
             self, method: str, path: str, headers: dict = None, body: dict = None
@@ -47,8 +53,9 @@ class HttpClient(Client):
         if not headers:
             headers = {}
         headers = {
-            "Content-Type": "application/json",
+            "Content-Type": "application/json; charset=utf-8",
             "Accept": "application/json",
+            "User-Agent": self.__get_user_agent()
         }
 
         params = {
@@ -56,9 +63,11 @@ class HttpClient(Client):
             "headers": headers,
             "ssl_context": self._ssl_context,
             "method": method,
-            "auth":   self.__createAuthHeader()
+            "auth": self.__createAuthHeader(),
+            "skip_auto_headers": ("User-Agent", "Content-Type"),
+
         }
-        
+
         self.logger.info("params: {}", params)
         if method in ["PUT", "POST"] and body:
             params["json"] = body
@@ -89,6 +98,15 @@ class HttpClient(Client):
     async def stop(self):
         if self._session:
             await self._session.close()
+
+    def __get_user_agent(self, app_version="1.2.3"):
+        platform_name = PLATFORM_STRINGS.get((platform.system() or '').lower(), None)
+        release = platform.release()
+        res = f"Signal-Desktop/{app_version}"
+        if platform_name:
+            res += f" {platform_name} {release}"
+        return res
+
 
 class ContactClient(HttpClient):
     async def create(self) -> Optional[str]:

@@ -20,7 +20,7 @@ DEVICES_PATH = "/v1/devices"
 
 DIRECTORY_TOKENS_PATH = "/v1/directory/tokens"
 DIRECTORY_VERIFY_PATH = "/v1/directory/%s"
-DIRECTORY_AUTH_PATH = "/v1/directory/auth"
+DIRECTORY_AUTH_PATH = "/v2/directory/auth"
 DIRECTORY_FEEDBACK_PATH = "/v1/directory/feedback-v3/%s"
 MESSAGE_PATH = "/v1/messages/%s"
 SENDER_ACK_MESSAGE_PATH = "/v1/messages/%s/%d"
